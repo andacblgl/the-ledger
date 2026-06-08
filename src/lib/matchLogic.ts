@@ -16,6 +16,9 @@ export interface Cocktail {
     instructions: string;
     glass_type: string;
     thumbnail_url?: string;
+    flavor_tags?: { slug: string; label: string }[];
+    lore?: { text: string; source?: string };
+    related_classics?: { slug: string; name: string; shared_trait: string; thumbnail_url: string }[];
     cocktail_ingredients: CocktailIngredient[];
 }
 

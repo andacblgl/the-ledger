@@ -65,3 +65,30 @@ CREATE TABLE public.top_shelf (
 ALTER TABLE public.top_shelf ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own top shelf" 
   ON public.top_shelf FOR ALL USING (auth.uid() = user_id);
+
+-- 5. Phase 3.5: Identity Layer (Cocktails Metadata)
+ALTER TABLE public.cocktails 
+ADD COLUMN IF NOT EXISTS flavor_tags JSONB,
+ADD COLUMN IF NOT EXISTS lore JSONB,
+ADD COLUMN IF NOT EXISTS related_classics JSONB;
+
+-- 6. Phase 4: Ingredient Pages Architecture
+-- We use ALTER TABLE to add the new scalable columns, as the base tables already exist for the matching engine.
+ALTER TABLE public.ingredients 
+ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE,
+ADD COLUMN IF NOT EXISTS description TEXT,
+ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+ALTER TABLE public.cocktail_ingredients
+ADD COLUMN IF NOT EXISTS measure TEXT;
+
+-- Enable RLS and guarantee public read access for the catalog
+ALTER TABLE public.ingredients ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read access for ingredients" ON public.ingredients;
+CREATE POLICY "Public read access for ingredients" 
+  ON public.ingredients FOR SELECT USING (true);
+
+ALTER TABLE public.cocktail_ingredients ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read access for cocktail_ingredients" ON public.cocktail_ingredients;
+CREATE POLICY "Public read access for cocktail_ingredients" 
+  ON public.cocktail_ingredients FOR SELECT USING (true);

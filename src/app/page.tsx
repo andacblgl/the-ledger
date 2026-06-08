@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { createClient } from '@/utils/supabase/client';
 import { useInventory } from '@/context/InventoryContext';
 import { Cocktail, evaluateCocktailMatch, MatchResult } from '@/lib/matchLogic';
-import { Search, Loader2, Wine, Circle, Bookmark, Star } from 'lucide-react';
+import { Search, Loader2, Wine, Circle, Bookmark, Star, Pin } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 // Extracted Component for Modal Content to manage its own form state
-function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf }: any) {
+function CocktailModalContent({ match, inventory, user, bookmarks, setBookmarks, topShelf, toggleTopShelf, allCocktails, onTagClick }: any) {
     const [rating, setRating] = useState(0);
     const [note, setNote] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -34,11 +34,11 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
         }
 
         setIsSaving(true);
-        const { error } = await supabaseClient.from('tasting_notes').insert({
+        const { error } = await supabaseClient.from('bookmarks').insert({
             user_id: user.id,
             cocktail_id: match.cocktail.id,
             rating,
-            notes: note.trim()
+            note: note.trim()
         });
         
         setIsSaving(false);
@@ -49,10 +49,28 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
             toast.success('Saved to your Tasting Diary.');
             setNote('');
             setRating(0);
+            if (setBookmarks) {
+                setBookmarks((prev: Set<string>) => {
+                    const next = new Set(prev);
+                    next.add(match.cocktail.id);
+                    return next;
+                });
+            }
         }
     };
 
-    const isTopShelf = topShelf.has(match.cocktail.id);
+    const isTopShelf = topShelf?.has(match.cocktail.id) || false;
+
+    const flavorTags = match.cocktail.flavor_tags || null;
+    const lore = match.cocktail.lore || null;
+    const relatedClassics = match.cocktail.related_classics || null;
+
+    console.log('====================================');
+    console.log('MODAL DATA:', match.cocktail.name, match.cocktail);
+    console.log('Flavor Tags:', flavorTags);
+    console.log('Lore:', lore);
+    console.log('Related Classics:', relatedClassics);
+    console.log('====================================');
 
     return (
         <DialogContent className="bg-[#1A1C19] border-stone-800 sm:max-w-md w-[95vw] rounded-2xl p-0 text-stone-200 max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
@@ -83,16 +101,36 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
                         </div>
                         {user && (
                             <button 
+                                type="button"
                                 onClick={() => toggleTopShelf(match.cocktail.id)}
                                 className={`p-2 rounded-full border transition-all ${isTopShelf ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 shadow-[0_0_10px_rgba(245,166,35,0.1)]' : 'bg-stone-900 border-stone-800 text-stone-500 hover:text-stone-300 hover:border-stone-600'}`}
                             >
-                                <Bookmark className="w-4 h-4" fill={isTopShelf ? "currentColor" : "none"} />
+                                <Pin className="w-4 h-4" fill={isTopShelf ? "currentColor" : "none"} />
                             </button>
                         )}
                     </div>
                 </DialogHeader>
 
                 <div className="space-y-8">
+                    {/* Semantic Identity: Flavor Tags */}
+                    {flavorTags && flavorTags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {flavorTags.slice(0, 3).map((tag: any) => {
+                                const tagText = typeof tag === 'string' ? tag : (tag?.label || tag?.slug || '');
+                                return (
+                                    <button 
+                                        key={tagText} 
+                                        onClick={() => onTagClick(tagText)}
+                                        className="border border-stone-800 text-stone-400 text-xs px-3 py-1 rounded-full font-sans tracking-wide hover:border-amber-500/50 hover:text-amber-500 transition-colors cursor-pointer"
+                                    >
+                                        {tagText}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Core: Ingredients */}
                     <div>
                         <h4 className="font-sans text-[10px] tracking-widest uppercase text-stone-500 mb-4 flex items-center gap-3">
                             Ingredients
@@ -117,7 +155,9 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
                                         )}
                                         <span className="leading-relaxed">
                                             {ci.amount ? `${ci.amount} ` : ''}
-                                            {ci.ingredients.name}
+                                            <Link href={`/ingredients/${ci.ingredients.slug || ci.ingredients.name.toLowerCase().replace(/\s+/g, '-')}`} className="hover:text-amber-500 hover:underline transition-colors">
+                                                {ci.ingredients.name}
+                                            </Link>
                                         </span>
                                     </li>
                                 );
@@ -125,6 +165,27 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
                         </ul>
                     </div>
 
+                    {/* Semantic Identity: Lore */}
+                    {lore && (
+                        <div>
+                            <h4 className="font-sans text-[10px] tracking-widest uppercase text-stone-500 mb-4 flex items-center gap-3">
+                                From the Archives
+                                <span className="h-[1px] bg-stone-800 flex-1"></span>
+                            </h4>
+                            <div className="border-l border-amber-500/30 pl-4 py-1">
+                                <p className="text-sm font-serif text-stone-300 leading-relaxed italic">
+                                    "{lore.text}"
+                                </p>
+                                {lore.source && (
+                                    <p className="text-[10px] font-sans uppercase tracking-widest text-stone-500 mt-2">
+                                        — {lore.source}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Core: Preparation */}
                     {match.cocktail.instructions && (
                         <div>
                             <h4 className="font-sans text-[10px] tracking-widest uppercase text-stone-500 mb-4 flex items-center gap-3">
@@ -134,6 +195,53 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
                             <p className="text-sm font-serif text-stone-300 leading-relaxed italic">
                                 {match.cocktail.instructions}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Semantic Identity: Related Classics */}
+                    {relatedClassics && relatedClassics.length > 0 && (
+                        <div>
+                            <h4 className="font-sans text-[10px] tracking-widest uppercase text-stone-500 mb-4 flex items-center gap-3">
+                                Related Classics
+                                <span className="h-[1px] bg-stone-800 flex-1"></span>
+                            </h4>
+                            <div className="flex gap-4 overflow-x-auto pb-4 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-stone-800 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                {relatedClassics.map((related: any) => {
+                                    const matchedCocktail = allCocktails?.find((c: any) => {
+                                        const cSlug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                        return cSlug === related.slug;
+                                    });
+                                    const thumbnailUrl = matchedCocktail?.thumbnail_url;
+                                    const imageSrc = thumbnailUrl 
+                                        ? (thumbnailUrl.startsWith('/') || thumbnailUrl.startsWith('http') ? thumbnailUrl : `/${thumbnailUrl}`)
+                                        : null;
+
+                                    return (
+                                        <div 
+                                            key={related.slug} 
+                                            className="min-w-[110px] max-w-[140px] flex-1 group cursor-pointer"
+                                        >
+                                            <div className="w-full aspect-square bg-stone-900 rounded-md overflow-hidden relative border border-stone-800 shadow-sm transition-transform duration-300 group-hover:scale-[1.02]">
+                                                {imageSrc ? (
+                                                    <img 
+                                                        src={imageSrc} 
+                                                        alt={related.name} 
+                                                        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-[#151714] text-stone-500 font-serif text-4xl font-light">
+                                                        {related.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <h5 className="mt-2.5 font-serif text-sm text-stone-200 truncate">{related.name}</h5>
+                                            <p className="text-[10px] font-sans tracking-wide uppercase text-stone-500 truncate mt-0.5">
+                                                {related.note || related.shared_trait}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
@@ -149,6 +257,7 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
                                 {[1, 2, 3, 4, 5].map(star => (
                                     <button 
                                         key={star}
+                                        type="button"
                                         onClick={() => setRating(star)}
                                         className="focus:outline-none transition-transform active:scale-90"
                                     >
@@ -168,6 +277,7 @@ function CocktailModalContent({ match, inventory, user, topShelf, toggleTopShelf
                             />
 
                             <button 
+                                type="button"
                                 onClick={handleSaveDiary}
                                 disabled={isSaving}
                                 className="w-full py-2.5 px-4 bg-stone-900 border border-stone-800 hover:border-stone-600 text-stone-300 font-sans tracking-wide uppercase text-[10px] rounded shadow-sm transition-all flex items-center justify-center disabled:opacity-50"
@@ -187,26 +297,50 @@ export default function ArchivePage() {
     const [cocktails, setCocktails] = useState<Cocktail[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
+    const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
     const [topShelf, setTopShelf] = useState<Set<string>>(new Set());
+    const [selectedCocktailId, setSelectedCocktailId] = useState<string | null>(null);
     const supabaseClient = createClient();
 
+    console.log("Current Active Filter:", activeTagFilter);
+
     useEffect(() => {
+        // Handle URL parameters for cocktail modal
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('cocktailId');
+        if (id) {
+            setSelectedCocktailId(id);
+        }
         async function fetchCocktails() {
             const { data, error } = await supabase
                 .from('cocktails')
                 .select(`
-                    *,
+                    id,
+                    name,
+                    description,
+                    instructions,
+                    glass_type,
+                    thumbnail_url,
+                    flavor_tags,
+                    lore,
+                    related_classics,
                     cocktail_ingredients (
                         ingredient_id,
                         is_essential,
                         role,
                         ingredients (
-                            name
+                            name,
+                            slug
                         )
                     )
                 `);
             
+            if (error) {
+                console.error("Error fetching cocktails:", error);
+            }
+
             if (data && !error) {
                 // @ts-ignore
                 setCocktails(data);
@@ -216,20 +350,21 @@ export default function ArchivePage() {
         
         fetchCocktails();
 
-        // Check Auth and Top Shelf
+        // Check Auth and User States
         supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
                 setUser(session.user);
-                fetchTopShelf(session.user.id);
+                fetchUserStates(session.user.id);
             }
         });
 
         const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
                 setUser(session.user);
-                fetchTopShelf(session.user.id);
+                fetchUserStates(session.user.id);
             } else {
                 setUser(null);
+                setBookmarks(new Set());
                 setTopShelf(new Set());
             }
         });
@@ -237,11 +372,13 @@ export default function ArchivePage() {
         return () => subscription.unsubscribe();
     }, []);
 
-    async function fetchTopShelf(userId: string) {
-        const { data } = await supabaseClient.from('top_shelf').select('cocktail_id').eq('user_id', userId);
-        if (data) {
-            setTopShelf(new Set(data.map(d => d.cocktail_id)));
-        }
+    async function fetchUserStates(userId: string) {
+        const [bm, ts] = await Promise.all([
+            supabaseClient.from('bookmarks').select('cocktail_id').eq('user_id', userId),
+            supabaseClient.from('top_shelf').select('cocktail_id').eq('user_id', userId)
+        ]);
+        if (bm.data) setBookmarks(new Set(bm.data.map(d => d.cocktail_id)));
+        if (ts.data) setTopShelf(new Set(ts.data.map(d => d.cocktail_id)));
     }
 
     const toggleTopShelf = async (cocktailId: string) => {
@@ -253,11 +390,10 @@ export default function ArchivePage() {
                 next.delete(cocktailId);
                 return next;
             });
-            const { error } = await supabaseClient.from('top_shelf').delete().eq('user_id', user.id).eq('cocktail_id', cocktailId);
-            if (error) console.error('Supabase Delete Error:', error);
+            await supabaseClient.from('top_shelf').delete().eq('user_id', user.id).eq('cocktail_id', cocktailId);
         } else {
             if (topShelf.size >= 4) {
-                toast.error('Your Top Shelf is full.', { description: 'Remove a cocktail to add a new one.' });
+                toast.error('Top Shelf full');
                 return;
             }
             setTopShelf(prev => {
@@ -265,9 +401,8 @@ export default function ArchivePage() {
                 next.add(cocktailId);
                 return next;
             });
-            toast.success('Added to Top Shelf');
-            const { error } = await supabaseClient.from('top_shelf').insert({ user_id: user.id, cocktail_id: cocktailId });
-            if (error) console.error('Supabase Insert Error:', error);
+            toast.success('Pinned to Top Shelf');
+            await supabaseClient.from('top_shelf').insert({ user_id: user.id, cocktail_id: cocktailId });
         }
     }
 
@@ -276,7 +411,34 @@ export default function ArchivePage() {
 
         const matches: MatchResult[] = cocktails.map(c => evaluateCocktailMatch(c, inventory));
         
-        const filtered = matches.filter(m => m.cocktail.name.toLowerCase().includes(search.toLowerCase()));
+        const filtered = matches.filter(m => {
+            const matchesSearch = m.cocktail.name.toLowerCase().includes(search.toLowerCase());
+            
+            let matchesTag = true;
+            if (activeTagFilter) {
+                if (!m.cocktail.flavor_tags) {
+                    matchesTag = false;
+                } else {
+                    let tagsArray: string[] = [];
+                    try {
+                        tagsArray = Array.isArray(m.cocktail.flavor_tags) 
+                            ? m.cocktail.flavor_tags 
+                            : typeof m.cocktail.flavor_tags === 'string' 
+                                ? JSON.parse(m.cocktail.flavor_tags) 
+                                : [];
+                    } catch (e) {
+                        tagsArray = [];
+                    }
+
+                    matchesTag = tagsArray.some((tag: any) => {
+                        const tagText = typeof tag === 'string' ? tag : (tag?.label || tag?.slug || '');
+                        return tagText.toLowerCase().trim() === activeTagFilter.toLowerCase().trim();
+                    });
+                }
+            }
+
+            return matchesSearch && matchesTag;
+        });
 
         const order = {
             'Perfect Match': 1,
@@ -286,7 +448,7 @@ export default function ArchivePage() {
         };
 
         return filtered.sort((a, b) => order[a.state] - order[b.state]);
-    }, [cocktails, inventory, search]);
+    }, [cocktails, inventory, search, activeTagFilter]);
 
     if (isLoading) {
         return (
@@ -337,6 +499,19 @@ export default function ArchivePage() {
                 />
             </div>
 
+            {activeTagFilter && (
+                <div className="flex items-center gap-3 mb-6">
+                    <span className="text-stone-500 text-[10px] font-sans tracking-widest uppercase">Filtered by:</span>
+                    <button 
+                        onClick={() => setActiveTagFilter(null)} 
+                        className="bg-amber-500/10 border border-amber-500/30 text-amber-500 px-3 py-1 rounded-full text-xs font-sans tracking-wide flex items-center gap-2 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all shadow-[0_0_10px_rgba(245,166,35,0.05)]"
+                    >
+                        {activeTagFilter}
+                        <span className="text-amber-500/70 hover:text-amber-500 ml-1 leading-none text-sm font-light">×</span>
+                    </button>
+                </div>
+            )}
+
             <div className="flex-1 overflow-y-auto pr-2 pb-10 flex flex-col gap-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-stone-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                 {matchedCocktails.map((match) => {
                     const ingredientPreview = match.cocktail.cocktail_ingredients
@@ -347,9 +522,25 @@ export default function ArchivePage() {
                     const isDimmed = match.state === 'Missing Ingredients';
 
                     return (
-                        <Dialog key={match.cocktail.id}>
+                        <Dialog 
+                            key={match.cocktail.id}
+                            open={selectedCocktailId === match.cocktail.id}
+                            onOpenChange={(isOpen) => {
+                                if (!isOpen) {
+                                    setSelectedCocktailId(null);
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.delete('cocktailId');
+                                    window.history.replaceState({}, '', url.toString());
+                                } else {
+                                    setSelectedCocktailId(match.cocktail.id);
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('cocktailId', match.cocktail.id);
+                                    window.history.replaceState({}, '', url.toString());
+                                }
+                            }}
+                        >
                             <DialogTrigger asChild>
-                                <div className={`w-full text-left bg-[#1E2320] border border-stone-800/40 p-4 rounded-2xl transition-all duration-300 cursor-pointer hover:bg-[#252b27] active:scale-[0.98] shadow-sm flex items-center
+                                <div role="button" tabIndex={0} className={`w-full text-left bg-[#1E2320] border border-stone-800/40 p-4 rounded-2xl transition-all duration-300 cursor-pointer hover:bg-[#252b27] active:scale-[0.98] shadow-sm flex items-center
                                     ${isDimmed ? 'opacity-50 grayscale-[0.3]' : 'opacity-100'}
                                 `}>
                                     {/* Thumbnail Image */}
@@ -409,8 +600,19 @@ export default function ArchivePage() {
                                 match={match} 
                                 inventory={inventory} 
                                 user={user}
+                                bookmarks={bookmarks}
+                                setBookmarks={setBookmarks}
                                 topShelf={topShelf}
                                 toggleTopShelf={toggleTopShelf}
+                                allCocktails={cocktails}
+                                onTagClick={(tagLabel: string) => {
+                                    setActiveTagFilter(tagLabel);
+                                    setSearch('');
+                                    setSelectedCocktailId(null);
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.delete('cocktailId');
+                                    window.history.replaceState({}, '', url.toString());
+                                }}
                             />
                         </Dialog>
                     );
