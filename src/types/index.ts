@@ -18,6 +18,7 @@ export interface BookmarkRecord {
   created_at: string;
   rating: number;
   note: string | null;
+  is_first_time: boolean;
 }
 
 export interface HydratedTopShelfSlot {

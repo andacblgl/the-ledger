@@ -2,6 +2,7 @@
 
 import { signout } from './actions';
 import { useCuratorVault } from '@/hooks/useCuratorVault';
+import { BaseCocktail, HydratedTopShelfSlot, HydratedDiaryEntry } from '@/types';
 import { TopShelfCard } from '@/components/Curator/TopShelfCard';
 import { DiaryCard } from '@/components/Curator/DiaryCard';
 import { FlavorProfileChart } from '@/components/Curator/FlavorProfileChart';
@@ -17,7 +18,9 @@ export default function ProfilePage() {
     activeTopShelfCount,
     diaryEntries,
     pinToShelf,
-    unpinFromShelf
+    unpinFromShelf,
+    updateDiaryEntry,
+    deleteDiaryEntry
   } = useCuratorVault();
 
   const [activeTab, setActiveTab] = useState<'diary' | 'profile'>('diary');
@@ -112,21 +115,31 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
-        
-        {activeTab === 'diary' ? (
-          diaryEntries.length > 0 ? (
+        {activeTab === 'diary' ? (() => {
+          const groupedEntries = Object.values(
+            diaryEntries.reduce((acc, entry) => {
+              if (!acc[entry.cocktail_id]) acc[entry.cocktail_id] = [];
+              acc[entry.cocktail_id].push(entry);
+              return acc;
+            }, {} as Record<string, HydratedDiaryEntry[]>)
+          );
+
+          return groupedEntries.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {diaryEntries.map((entry) => {
-                const isPinned = topShelfSlots.some(s => s && s.cocktail_id === entry.cocktail_id);
+              {groupedEntries.map((entries) => {
+                const primaryEntry = entries[0];
+                const isPinned = topShelfSlots.some(s => s && s.cocktail_id === primaryEntry.cocktail_id);
                 const canPin = activeTopShelfCount < 4;
 
                 return (
                   <DiaryCard 
-                    key={entry.id}
-                    entry={entry}
+                    key={primaryEntry.cocktail_id}
+                    entries={entries}
                     isPinned={isPinned}
                     canPin={canPin}
                     onPin={pinToShelf}
+                    onUpdate={updateDiaryEntry}
+                    onDelete={deleteDiaryEntry}
                   />
                 );
               })}
@@ -135,8 +148,8 @@ export default function ProfilePage() {
             <div className="py-16 text-center border border-dashed border-stone-800/60 rounded-lg bg-stone-900/20">
               <p className="text-sm font-sans text-stone-500 italic tracking-wide">No bookmarks in your diary yet.</p>
             </div>
-          )
-        ) : (
+          );
+        })() : (
           <FlavorProfileChart entries={diaryEntries} />
         )}
       </section>

@@ -21,6 +21,7 @@ function CocktailModalContent({ match, inventory, user, bookmarks, setBookmarks,
     const [rating, setRating] = useState(0);
     const [note, setNote] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isFirstTime, setIsFirstTime] = useState(!bookmarks?.has(match.cocktail.id));
     const supabaseClient = createClient();
 
     const handleSaveDiary = async () => {
@@ -38,7 +39,8 @@ function CocktailModalContent({ match, inventory, user, bookmarks, setBookmarks,
             user_id: user.id,
             cocktail_id: match.cocktail.id,
             rating,
-            note: note.trim()
+            note: note.trim(),
+            is_first_time: isFirstTime
         });
         
         setIsSaving(false);
@@ -275,6 +277,13 @@ function CocktailModalContent({ match, inventory, user, bookmarks, setBookmarks,
                                 placeholder="Log your tasting experience..."
                                 className="w-full bg-stone-900/40 border border-stone-800 rounded-lg p-3 text-sm text-stone-200 placeholder:text-stone-600 focus:outline-none focus:border-stone-600 transition-colors mb-4 resize-none h-24 font-serif"
                             />
+
+                            <label className="flex items-center gap-2 mb-6 cursor-pointer group w-fit">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isFirstTime ? 'bg-amber-500 border-amber-500' : 'bg-stone-900 border-stone-700 group-hover:border-stone-500'}`}>
+                                    {isFirstTime && <svg className="w-3 h-3 text-stone-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                </div>
+                                <span className="text-xs font-sans tracking-wide text-stone-400 group-hover:text-stone-300 transition-colors">First-time taste</span>
+                            </label>
 
                             <button 
                                 type="button"

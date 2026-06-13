@@ -44,7 +44,7 @@ export function useCuratorVault() {
 
       const { data: diaryData } = await supabase
         .from('bookmarks')
-        .select('id, created_at, cocktail_id, rating, note, user_id')
+        .select('id, created_at, cocktail_id, rating, note, user_id, is_first_time')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
@@ -175,6 +175,48 @@ export function useCuratorVault() {
     }
   };
 
+  const updateDiaryEntry = async (bookmarkId: string, rating: number, note: string, is_first_time: boolean) => {
+    if (!user) return;
+
+    const previousEntries = [...diaryEntries];
+    setDiaryEntries(prev => prev.map(entry => 
+      entry.id === bookmarkId ? { ...entry, rating, note, is_first_time } : entry
+    ));
+
+    const { error } = await supabase
+      .from('bookmarks')
+      .update({ rating, note, is_first_time })
+      .eq('id', bookmarkId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast.error('Failed to update entry');
+      setDiaryEntries(previousEntries);
+    } else {
+      toast.success('Entry updated');
+    }
+  };
+
+  const deleteDiaryEntry = async (bookmarkId: string) => {
+    if (!user) return;
+
+    const previousEntries = [...diaryEntries];
+    setDiaryEntries(prev => prev.filter(entry => entry.id !== bookmarkId));
+
+    const { error } = await supabase
+      .from('bookmarks')
+      .delete()
+      .eq('id', bookmarkId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast.error('Failed to delete entry');
+      setDiaryEntries(previousEntries);
+    } else {
+      toast.success('Entry deleted');
+    }
+  };
+
   return {
     user,
     isLoading,
@@ -183,6 +225,8 @@ export function useCuratorVault() {
     activeTopShelfCount,
     diaryEntries,
     pinToShelf,
-    unpinFromShelf
+    unpinFromShelf,
+    updateDiaryEntry,
+    deleteDiaryEntry
   };
 }
