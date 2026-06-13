@@ -2,6 +2,7 @@ export interface BaseCocktail {
   id: string;
   name: string;
   thumbnail_url: string | null;
+  flavor_tags?: { slug: string; label: string }[] | null;
 }
 
 export interface TopShelfRecord {

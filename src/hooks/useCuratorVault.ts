@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { User } from '@supabase/supabase-js';
 import { HydratedTopShelfSlot, HydratedDiaryEntry, BaseCocktail } from '@/types';
 import { toast } from 'sonner';
 
 export function useCuratorVault() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [topShelfSlots, setTopShelfSlots] = useState<(HydratedTopShelfSlot | null)[]>(Array(4).fill(null));
   const [diaryEntries, setDiaryEntries] = useState<HydratedDiaryEntry[]>([]);
@@ -43,7 +44,7 @@ export function useCuratorVault() {
 
       const { data: diaryData } = await supabase
         .from('bookmarks')
-        .select('id, created_at, cocktail_id, rating, note')
+        .select('id, created_at, cocktail_id, rating, note, user_id')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
@@ -55,7 +56,7 @@ export function useCuratorVault() {
       if (cocktailIds.size > 0) {
         const { data: cocktailsData } = await supabase
             .from('cocktails')
-            .select('id, name, thumbnail_url')
+            .select('id, name, thumbnail_url, flavor_tags')
             .in('id', Array.from(cocktailIds));
         
         if (cocktailsData) {
@@ -76,7 +77,7 @@ export function useCuratorVault() {
             newSlots[slotIndex] = {
               cocktail_id: item.cocktail_id,
               added_at: item.added_at,
-              cocktail: cocktailMap[item.cocktail_id] || { id: item.cocktail_id, name: 'Unknown', thumbnail_url: null }
+              cocktail: cocktailMap[item.cocktail_id] || { id: item.cocktail_id, name: 'Unknown', thumbnail_url: null, flavor_tags: null }
             };
             slotIndex++;
           }
@@ -86,7 +87,7 @@ export function useCuratorVault() {
 
       const newDiary: HydratedDiaryEntry[] = diaryData ? diaryData.map(note => ({
         ...note,
-        cocktail: cocktailMap[note.cocktail_id] || { id: note.cocktail_id, name: 'Unknown Cocktail', thumbnail_url: null }
+        cocktail: cocktailMap[note.cocktail_id] || { id: note.cocktail_id, name: 'Unknown Cocktail', thumbnail_url: null, flavor_tags: null }
       })) : [];
       setDiaryEntries(newDiary);
       setIsLoading(false);
@@ -150,7 +151,7 @@ export function useCuratorVault() {
     setTopShelfSlots(prev => {
       const next = prev.map(slot => slot?.cocktail_id === cocktailId ? null : slot);
       // Compact the array to remove gaps so new pins append nicely
-      const active = next.filter(s => s !== null);
+      const active: (HydratedTopShelfSlot | null)[] = next.filter(s => s !== null);
       while(active.length < 4) active.push(null);
       return active;
     });

@@ -4,7 +4,9 @@ import { signout } from './actions';
 import { useCuratorVault } from '@/hooks/useCuratorVault';
 import { TopShelfCard } from '@/components/Curator/TopShelfCard';
 import { DiaryCard } from '@/components/Curator/DiaryCard';
+import { FlavorProfileChart } from '@/components/Curator/FlavorProfileChart';
 import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 export default function ProfilePage() {
   const {
@@ -17,6 +19,8 @@ export default function ProfilePage() {
     pinToShelf,
     unpinFromShelf
   } = useCuratorVault();
+
+  const [activeTab, setActiveTab] = useState<'diary' | 'profile'>('diary');
 
   if (isLoading) {
     return (
@@ -78,33 +82,62 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* 4. Tasting Diary */}
+      {/* 4. Tasting Diary & Flavor Profile */}
       <section className="flex-1 pb-10">
-        <h2 className="text-xs font-semibold tracking-widest uppercase text-stone-500 mb-4 border-b border-stone-800/60 pb-2">
-          Tasting Diary
-        </h2>
+        <div className="flex items-center justify-between border-b border-stone-800/60 pb-2 mb-4">
+          <h2 className="text-xs font-semibold tracking-widest uppercase text-stone-500">
+            Tasting Diary
+          </h2>
+          
+          <div className="flex bg-stone-900 rounded-md p-0.5 border border-stone-800">
+            <button
+              onClick={() => setActiveTab('diary')}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${
+                activeTab === 'diary' 
+                  ? 'bg-stone-800 text-stone-200 shadow-sm' 
+                  : 'text-stone-500 hover:text-stone-300'
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-3 py-1 text-xs font-medium rounded-sm transition-colors ${
+                activeTab === 'profile' 
+                  ? 'bg-stone-800 text-stone-200 shadow-sm' 
+                  : 'text-stone-500 hover:text-stone-300'
+              }`}
+            >
+              Flavor Profile
+            </button>
+          </div>
+        </div>
         
-        {diaryEntries.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {diaryEntries.map((entry) => {
-              const isPinned = topShelfSlots.some(s => s && s.cocktail_id === entry.cocktail_id);
-              const canPin = activeTopShelfCount < 4;
+        {activeTab === 'diary' ? (
+          diaryEntries.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {diaryEntries.map((entry) => {
+                const isPinned = topShelfSlots.some(s => s && s.cocktail_id === entry.cocktail_id);
+                const canPin = activeTopShelfCount < 4;
 
-              return (
-                <DiaryCard 
-                  key={entry.id}
-                  entry={entry}
-                  isPinned={isPinned}
-                  canPin={canPin}
-                  onPin={pinToShelf}
-                />
-              );
-            })}
-          </div>
+                return (
+                  <DiaryCard 
+                    key={entry.id}
+                    entry={entry}
+                    isPinned={isPinned}
+                    canPin={canPin}
+                    onPin={pinToShelf}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-16 text-center border border-dashed border-stone-800/60 rounded-lg bg-stone-900/20">
+              <p className="text-sm font-sans text-stone-500 italic tracking-wide">No bookmarks in your diary yet.</p>
+            </div>
+          )
         ) : (
-          <div className="py-16 text-center border border-dashed border-stone-800/60 rounded-lg bg-stone-900/20">
-            <p className="text-sm font-sans text-stone-500 italic tracking-wide">No bookmarks in your diary yet.</p>
-          </div>
+          <FlavorProfileChart entries={diaryEntries} />
         )}
       </section>
     </div>

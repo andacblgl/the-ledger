@@ -21,8 +21,7 @@ export function DiaryCard({ entry, isPinned, canPin, onPin }: DiaryCardProps) {
     <div className="p-3 bg-stone-900/40 border border-stone-800/60 rounded-lg flex flex-col relative group">
       {/* DIALOG TRIGGERS ON TOP HALF ONLY */}
       <Dialog>
-        <DialogTrigger asChild>
-          <div role="button" tabIndex={0} className="flex flex-col cursor-pointer flex-1 outline-none">
+        <DialogTrigger render={<div role="button" tabIndex={0} className="flex flex-col cursor-pointer flex-1 outline-none" />}>
             <div className="aspect-square w-full bg-stone-900 rounded-md overflow-hidden mb-3 border border-stone-800/80">
               {thumbnailUrl ? (
                 <img src={thumbnailUrl} alt={cocktailName} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -44,7 +43,6 @@ export function DiaryCard({ entry, isPinned, canPin, onPin }: DiaryCardProps) {
             )}
             
             <span className="text-[10px] uppercase tracking-widest text-stone-500 mb-3">{formattedDate}</span>
-          </div>
         </DialogTrigger>
         
         <DialogContent className="bg-[#1A1C19] border-stone-800 sm:max-w-md w-[95vw] rounded-2xl p-0 text-stone-200 overflow-hidden flex flex-col shadow-2xl">

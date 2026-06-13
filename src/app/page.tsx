@@ -539,10 +539,7 @@ export default function ArchivePage() {
                                 }
                             }}
                         >
-                            <DialogTrigger asChild>
-                                <div role="button" tabIndex={0} className={`w-full text-left bg-[#1E2320] border border-stone-800/40 p-4 rounded-2xl transition-all duration-300 cursor-pointer hover:bg-[#252b27] active:scale-[0.98] shadow-sm flex items-center
-                                    ${isDimmed ? 'opacity-50 grayscale-[0.3]' : 'opacity-100'}
-                                `}>
+                            <DialogTrigger render={<div role="button" tabIndex={0} className={`w-full text-left bg-[#1E2320] border border-stone-800/40 p-4 rounded-2xl transition-all duration-300 cursor-pointer hover:bg-[#252b27] active:scale-[0.98] shadow-sm flex items-center ${isDimmed ? 'opacity-50 grayscale-[0.3]' : 'opacity-100'}`} />}>
                                     {/* Thumbnail Image */}
                                     <div className="w-20 h-20 shrink-0 bg-stone-900 rounded-xl overflow-hidden relative border border-stone-800/80">
                                         {match.cocktail.thumbnail_url ? (
@@ -593,7 +590,6 @@ export default function ArchivePage() {
                                             </p>
                                         )}
                                     </div>
-                                </div>
                             </DialogTrigger>
 
                             <CocktailModalContent 
