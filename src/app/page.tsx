@@ -307,6 +307,7 @@ export default function ArchivePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+    const [showMakeableOnly, setShowMakeableOnly] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
     const [topShelf, setTopShelf] = useState<Set<string>>(new Set());
@@ -421,6 +422,8 @@ export default function ArchivePage() {
         const matches: MatchResult[] = cocktails.map(c => evaluateCocktailMatch(c, inventory));
         
         const filtered = matches.filter(m => {
+            if (showMakeableOnly && m.missingIngredients.length > 0) return false;
+            
             const matchesSearch = m.cocktail.name.toLowerCase().includes(search.toLowerCase());
             
             let matchesTag = true;
@@ -457,7 +460,7 @@ export default function ArchivePage() {
         };
 
         return filtered.sort((a, b) => order[a.state] - order[b.state]);
-    }, [cocktails, inventory, search, activeTagFilter]);
+    }, [cocktails, inventory, search, activeTagFilter, showMakeableOnly]);
 
     if (isLoading) {
         return (
@@ -508,6 +511,20 @@ export default function ArchivePage() {
                 />
             </div>
 
+            <div className="flex items-center gap-3 mb-6">
+                <button
+                    onClick={() => setShowMakeableOnly(!showMakeableOnly)}
+                    className={`px-4 py-1.5 rounded-full text-[10px] font-sans tracking-widest uppercase transition-all duration-300 flex items-center gap-2 border ${
+                        showMakeableOnly 
+                            ? 'bg-amber-500 border-amber-500 text-black shadow-[0_0_10px_rgba(245,166,35,0.3)]' 
+                            : 'bg-zinc-800 border-stone-800 text-zinc-400 hover:text-zinc-300 hover:border-stone-700'
+                    }`}
+                >
+                    <div className={`w-1.5 h-1.5 rounded-full ${showMakeableOnly ? 'bg-black' : 'bg-zinc-500'}`} />
+                    Makeable Now
+                </button>
+            </div>
+
             {activeTagFilter && (
                 <div className="flex items-center gap-3 mb-6">
                     <span className="text-stone-500 text-[10px] font-sans tracking-widest uppercase">Filtered by:</span>
@@ -522,7 +539,22 @@ export default function ArchivePage() {
             )}
 
             <div className="flex-1 overflow-y-auto pr-2 pb-10 flex flex-col gap-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-stone-800 [&::-webkit-scrollbar-thumb]:rounded-full">
-                {matchedCocktails.map((match) => {
+                {matchedCocktails.length === 0 && showMakeableOnly ? (
+                    <div className="py-12 px-6 border border-dashed border-stone-800/60 rounded-2xl text-center bg-stone-900/20">
+                        <Wine className="w-8 h-8 text-stone-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-serif text-stone-300 mb-2">No drinks ready to mix</h3>
+                        <p className="text-sm text-stone-500 font-sans leading-relaxed mb-6">
+                            Your cabinet needs a few more additions to mix these classics. Head over to My Bar to see what to acquire next.
+                        </p>
+                        <Link 
+                            href="/my-bar"
+                            className="inline-block border border-amber-500/30 text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-6 py-2 rounded-full font-sans text-[10px] tracking-widest uppercase transition-colors"
+                        >
+                            Stock My Bar
+                        </Link>
+                    </div>
+                ) : (
+                    matchedCocktails.map((match) => {
                     const ingredientPreview = match.cocktail.cocktail_ingredients
                         .map(ci => ci.ingredients.name)
                         .slice(0, 3)
@@ -621,9 +653,9 @@ export default function ArchivePage() {
                             />
                         </Dialog>
                     );
-                })}
+                }))}
                 
-                {matchedCocktails.length === 0 && search && (
+                {matchedCocktails.length === 0 && search && !showMakeableOnly && (
                     <div className="text-center text-stone-500 py-10 font-serif italic">
                         No cocktails found matching your query.
                     </div>
