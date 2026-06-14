@@ -4,6 +4,7 @@ import { useInventory } from '@/context/InventoryContext';
 import { useState, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { useShoppingInsights } from '@/hooks/useShoppingInsights';
 
 // Helper to convert to Title Case
 const toTitleCase = (str: string) => {
@@ -16,6 +17,7 @@ const toTitleCase = (str: string) => {
 export default function MyBarPage() {
     const { ingredients, inventory, toggleIngredient, isLoading } = useInventory();
     const [search, setSearch] = useState('');
+    const { insights, isLoading: isInsightsLoading } = useShoppingInsights();
 
     // 1. Frontend Data Cleaning (Deduplication & Formatting)
     const cleanedIngredients = useMemo(() => {
@@ -79,6 +81,37 @@ export default function MyBarPage() {
                     className="w-full bg-stone-900/50 border border-stone-800 rounded-lg py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all text-stone-200 placeholder:text-stone-600 font-sans"
                 />
             </div>
+
+            {/* NEW SECTION: Curator's Insight */}
+            {insights.length > 0 && !isSearching && (
+                <section className="mb-10 shrink-0">
+                    <h2 className="text-xs font-semibold tracking-widest uppercase text-amber-500 mb-4 flex items-center gap-3">
+                        💡 Curator's Insight
+                        <span className="h-[1px] bg-amber-500/20 flex-1"></span>
+                    </h2>
+                    <div className="bg-gradient-to-br from-stone-900 to-stone-900/50 border border-amber-500/20 rounded-xl p-5 shadow-lg relative overflow-hidden group">
+                        <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors pointer-events-none"></div>
+                        
+                        <div className="relative z-10">
+                            <p className="text-sm text-stone-300 font-serif leading-relaxed flex flex-wrap items-center">
+                                <span>Acquiring</span>
+                                <button 
+                                    onClick={() => toggleIngredient(insights[0].ingredientId)}
+                                    className="font-sans font-bold text-amber-500 tracking-wide uppercase text-xs mx-1.5 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 cursor-pointer transition-all hover:scale-105 hover:bg-amber-500/20 hover:border-amber-500/50 hover:shadow-[0_0_10px_rgba(245,166,35,0.2)] focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                                    aria-label={`Add ${insights[0].ingredientName} to your cabinet`}
+                                >
+                                    {insights[0].ingredientName}
+                                </button> 
+                                <span>will unlock <strong className="text-stone-200">{insights[0].unlockCount}</strong> new classic {insights[0].unlockCount === 1 ? 'cocktail' : 'cocktails'}</span>
+
+                                <span className="text-stone-500 italic text-xs ml-1">
+                                    (e.g., {insights[0].unlockedCocktails.slice(0, 2).join(', ')}{insights[0].unlockedCocktails.length > 2 ? '...' : ''})
+                                </span>.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* 2. Your Cabinet (Selected State) */}
             <section className="mb-10 shrink-0">
